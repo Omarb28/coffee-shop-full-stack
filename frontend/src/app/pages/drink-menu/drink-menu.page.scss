@@ -3,3 +3,10 @@ ion-title {
     font-family: 'Playfair Display', serif;  
     font-size: 1.7em;
 }
+
+ion-title img {
+    height: 40px;
+    width: 40px;
+    margin-right: 10px;
+    vertical-align: bottom;
+}
