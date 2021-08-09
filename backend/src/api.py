@@ -33,19 +33,22 @@ def retrieve_drinks():
             where drinks is the list of drinks
             or appropriate status code indicating reason for failure
     '''
-    drinks = Drink.query.all()
+    try:
+        drinks = Drink.query.all()
 
-    if len(drinks) == 0:
-        abort(404, description='No drinks found.')
+        if len(drinks) == 0:
+            abort(404, description='No drinks found.')
 
-    for i in range(len(drinks)):
-        drink = drinks[i].short()
-        drinks[i] = drink
+        for i in range(len(drinks)):
+            drink = drinks[i].short()
+            drinks[i] = drink
 
-    return jsonify({
-        "success": True,
-        "drinks": drinks
-    }), 200
+        return jsonify({
+            "success": True,
+            "drinks": drinks
+        }), 200
+    except exc.SQLAlchemyError:
+        abort(400, description='Could not retrieve drinks.')
 
 
 @app.route('/drinks-detail')
@@ -60,19 +63,22 @@ def retrieve_drinks_detail(jwt):
         where drinks is the list of drinks
             or appropriate status code indicating reason for failure
     '''
-    drinks = Drink.query.all()
+    try:
+        drinks = Drink.query.all()
 
-    if len(drinks) == 0:
-        abort(404, description='No drinks found.')
+        if len(drinks) == 0:
+            abort(404, description='No drinks found.')
 
-    for i in range(len(drinks)):
-        drink = drinks[i].long()
-        drinks[i] = drink
+        for i in range(len(drinks)):
+            drink = drinks[i].long()
+            drinks[i] = drink
 
-    return jsonify({
-        "success": True,
-        "drinks": drinks
-    }), 200
+        return jsonify({
+            "success": True,
+            "drinks": drinks
+        }), 200
+    except exc.SQLAlchemyError:
+        abort(400, description='Could not retrieve drinks detail.')
 
 
 @app.route('/drinks', methods=['POST'])
@@ -88,52 +94,53 @@ def create_drink(jwt):
             where drink an array containing only the newly created drink
             or appropriate status code indicating reason for failure
     '''
-    body = request.get_json()
-    title = body.get('title')
-    recipe = body.get('recipe')
-
-    if (
-        type(title) is not str
-        or type(recipe) is not list
-    ):
-        abort(400, description='Title or recipe list is not correct type.')
-
-    if (
-        title == ''
-        or len(recipe) == 0
-    ):
-        abort(422, description='Title or recipe list is empty.')
-
-    # Check if title is unique
-    search = Drink.query.filter(Drink.title == title).one_or_none()
-    if search is not None:
-        abort(409, description='Title is not unique.')
-
-    # Check recipe elements
-    for r in recipe:
-        if type(r) is not dict:
-            abort(400, description='Recipe is not dictionary type.')
-
-        name = r.get('name')
-        color = r.get('color')
-        parts = r.get('parts')
-
-        if (
-            type(name) is not str
-            or type(color) is not str
-            or type(parts) is not int
-        ):
-            abort(400, description='Recipe elements are either '
-                                   'missing or not correct type.')
-
-        if (
-            name == ''
-            or color == ''
-            or parts < 1
-        ):
-            abort(422, description='Recipe element is empty or incorrect.')
-
     try:
+        body = request.get_json()
+        title = body.get('title')
+        recipe = body.get('recipe')
+
+        if (
+            type(title) is not str
+            or type(recipe) is not list
+        ):
+            abort(400, description='Title or recipe list is not correct type.')
+
+        if (
+            title == ''
+            or len(recipe) == 0
+        ):
+            abort(422, description='Title or recipe list is empty.')
+
+        # Check if title is unique
+        search = Drink.query.filter(Drink.title == title).one_or_none()
+        if search is not None:
+            abort(409, description='Title is not unique.')
+
+        # Check recipe elements
+        for r in recipe:
+            if type(r) is not dict:
+                abort(400, description='Recipe is not dictionary type.')
+
+            name = r.get('name')
+            color = r.get('color')
+            parts = r.get('parts')
+
+            if (
+                type(name) is not str
+                or type(color) is not str
+                or type(parts) is not int
+            ):
+                abort(400, description='Recipe elements are either '
+                                       'missing or not correct type.')
+
+            if (
+                name == ''
+                or color == ''
+                or parts < 1
+            ):
+                abort(422, description='Recipe element is empty or incorrect.')
+
+        # Create drink
         recipe = json.dumps(recipe)
 
         drink = Drink(title=title, recipe=recipe)
@@ -162,57 +169,59 @@ def update_drink(jwt, drink_id):
             where drink an array containing only the updated drink
             or appropriate status code indicating reason for failure
     '''
-    drink = Drink.query.get(drink_id)
-
-    if drink is None:
-        abort(404, description='Drink not found.')
-
-    body = request.get_json()
-    title = body.get('title')
-    recipe = body.get('recipe')
-
-    if title is not None:
-        if type(title) is not str:
-            abort(400, description='Title is not string type.')
-        elif title == '':
-            abort(422, description='Title is empty.')
-
-        # Check if title is unique (excluding current drink)
-        search = Drink.query.filter(Drink.title == title).one_or_none()
-        if search is not None and drink.title != title:
-            abort(409, description='Title is not unique.')
-
-    if recipe is not None:
-        if type(recipe) is not list:
-            abort(400, description='Recipe list is not list type.')
-        elif len(recipe) == 0:
-            abort(422, description='Recipe list is empty.')
-
-        # Check recipe elements
-        for r in recipe:
-            if type(r) is not dict:
-                abort(400, description='Recipe is not dictionary type.')
-
-            name = r.get('name')
-            color = r.get('color')
-            parts = r.get('parts')
-
-            if (
-                type(name) is not str
-                or type(color) is not str
-                or type(parts) is not int
-            ):
-                abort(400, description='Recipe element is either '
-                                       'missing or not correct type.')
-
-            if (
-                name == ''
-                or color == ''
-                or parts < 1
-            ):
-                abort(422, description='Recipe element is empty or incorrect.')
-
     try:
+        drink = Drink.query.get(drink_id)
+
+        if drink is None:
+            abort(404, description='Drink not found.')
+
+        body = request.get_json()
+        title = body.get('title')
+        recipe = body.get('recipe')
+
+        if title is not None:
+            if type(title) is not str:
+                abort(400, description='Title is not string type.')
+            elif title == '':
+                abort(422, description='Title is empty.')
+
+            # Check if title is unique (excluding current drink)
+            search = Drink.query.filter(Drink.title == title).one_or_none()
+            if search is not None and drink.title != title:
+                abort(409, description='Title is not unique.')
+
+        if recipe is not None:
+            if type(recipe) is not list:
+                abort(400, description='Recipe list is not list type.')
+            elif len(recipe) == 0:
+                abort(422, description='Recipe list is empty.')
+
+            # Check recipe elements
+            for r in recipe:
+                if type(r) is not dict:
+                    abort(400, description='Recipe is not dictionary type.')
+
+                name = r.get('name')
+                color = r.get('color')
+                parts = r.get('parts')
+
+                if (
+                    type(name) is not str
+                    or type(color) is not str
+                    or type(parts) is not int
+                ):
+                    abort(400, description='Recipe element is either '
+                                           'missing or not correct type.')
+
+                if (
+                    name == ''
+                    or color == ''
+                    or parts < 1
+                ):
+                    abort(422, description='Recipe element is '
+                                           'empty or incorrect.')
+
+        # Update drink
         if title is not None:
             drink.title = title
         if recipe is not None:
@@ -243,12 +252,12 @@ def delete_drink(jwt, drink_id):
             where id is the id of the deleted record
             or appropriate status code indicating reason for failure
     '''
-    drink = Drink.query.get(drink_id)
-
-    if drink is None:
-        abort(404, description='Drink not found.')
-
     try:
+        drink = Drink.query.get(drink_id)
+
+        if drink is None:
+            abort(404, description='Drink not found.')
+
         drink.delete()
 
         return jsonify({
