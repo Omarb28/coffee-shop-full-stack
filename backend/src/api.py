@@ -271,7 +271,8 @@ def unprocessable(error):
     return jsonify({
         "success": False,
         "error": 422,
-        "message": "Unprocessable Entity"
+        "message": "Unprocessable Entity",
+        'description': error.description
     }), 422
 
 
@@ -302,7 +303,8 @@ def not_allowed(error):
     return jsonify({
         'success': False,
         'error': 405,
-        'message': 'Method Not Allowed'
+        'message': 'Method Not Allowed',
+        'description': error.description
     }), 405
 
 
@@ -311,7 +313,8 @@ def conflict(error):
     return jsonify({
         'success': False,
         'error': 409,
-        'message': 'Conflict'
+        'message': 'Conflict',
+        'description': error.description
     }), 409
 
 
@@ -320,7 +323,8 @@ def server_error(error):
     return jsonify({
         'success': False,
         'error': 500,
-        'message': 'Internal Server Error'
+        'message': 'Internal Server Error',
+        'description': error.description
     }), 500
 
 
@@ -335,7 +339,8 @@ def not_found(error):
     return jsonify({
         'success': False,
         'error': 404,
-        'message': 'Not Found'
+        'message': 'Not Found',
+        'description': error.description
     }), 404
 
 
