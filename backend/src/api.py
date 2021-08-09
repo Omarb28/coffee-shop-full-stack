@@ -63,7 +63,6 @@ def retrieve_drinks():
     }), 200
 
 
-
 @app.route('/drinks-detail')
 @requires_auth('get:drinks-detail')
 def retrieve_drinks_detail(jwt):
@@ -111,13 +110,13 @@ def create_drink(jwt):
     if (
         type(title) is not str
         or type(recipe) is not list
-        ):
+    ):
         abort(400, description='Title or recipe list is not correct type.')
 
     if (
-        title == '' 
+        title == ''
         or len(recipe) == 0
-        ):
+    ):
         abort(422, description='Title or recipe list is empty.')
 
     # Check if title is unique
@@ -129,7 +128,7 @@ def create_drink(jwt):
     for r in recipe:
         if type(r) is not dict:
             abort(400, description='Recipe is not dictionary type.')
-        
+
         name = r.get('name')
         color = r.get('color')
         parts = r.get('parts')
@@ -138,14 +137,15 @@ def create_drink(jwt):
             type(name) is not str
             or type(color) is not str
             or type(parts) is not int
-            ):
-            abort(400, description='Recipe elements are either missing or not correct type.')
-        
+        ):
+            abort(400, description='Recipe elements are either '
+                                   'missing or not correct type.')
+
         if (
             name == ''
             or color == ''
             or parts < 1
-            ):
+        ):
             abort(422, description='Recipe element is empty or incorrect.')
 
     try:
@@ -158,8 +158,7 @@ def create_drink(jwt):
             "success": True,
             "drinks": [drink.long()]
         }), 200
-
-    except:
+    except exc.SQLAlchemyError:
         abort(400, description='Could not create drink.')
 
 
@@ -203,12 +202,12 @@ def update_drink(jwt, drink_id):
             abort(400, description='Recipe list is not list type.')
         elif len(recipe) == 0:
             abort(422, description='Recipe list is empty.')
-        
+
         # Check recipe elements
         for r in recipe:
             if type(r) is not dict:
                 abort(400, description='Recipe is not dictionary type.')
-            
+
             name = r.get('name')
             color = r.get('color')
             parts = r.get('parts')
@@ -217,14 +216,15 @@ def update_drink(jwt, drink_id):
                 type(name) is not str
                 or type(color) is not str
                 or type(parts) is not int
-                ):
-                abort(400, description='Recipe element is either missing or not correct type.')
-            
+            ):
+                abort(400, description='Recipe element is either '
+                                       'missing or not correct type.')
+
             if (
                 name == ''
                 or color == ''
                 or parts < 1
-                ):
+            ):
                 abort(422, description='Recipe element is empty or incorrect.')
 
     try:
@@ -240,7 +240,7 @@ def update_drink(jwt, drink_id):
             'status_code': 200,
             'drinks': [drink.long()]
         })
-    except:
+    except exc.SQLAlchemyError:
         abort(400, description='Could not update drink.')
 
 
@@ -271,7 +271,7 @@ def delete_drink(jwt, drink_id):
             'status_code': 200,
             'delete': drink.id
         })
-    except:
+    except exc.SQLAlchemyError:
         abort(400, description='Could not delete drink.')
 
 
@@ -300,6 +300,7 @@ def unprocessable(error):
                     }), 404
 
 '''
+
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -370,7 +371,10 @@ def auth_error_handler(error):
         401: "Unauthorized",
         403: "Forbidden"
     }
-    status_code_message = messages.get(status_code, "Status code message could not be found")
+    status_code_message = messages.get(
+        status_code,
+        "Status code message could not be found"
+    )
 
     return jsonify({
         "success": False,

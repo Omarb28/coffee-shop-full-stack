@@ -32,7 +32,7 @@ def get_token_auth_header():
         return the token part of the header
     '''
     auth = request.headers.get('Authorization', None)
-    
+
     if not auth:
         raise AuthError({
             'code': 'authorization_header_missing',
@@ -60,7 +60,6 @@ def get_token_auth_header():
 
     token = parts[1]
     return token
-
 
 
 def verify_decode_jwt(token):
