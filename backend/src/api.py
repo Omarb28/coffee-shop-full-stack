@@ -12,7 +12,7 @@ setup_db(app)
 CORS(app)
 
 '''
-@TODO uncomment the following line to initialize the datbase
+@DONE uncomment the following line to initialize the datbase
 !! NOTE THIS WILL DROP ALL RECORDS AND START YOUR DB FROM SCRATCH
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 !! Running this funciton will add one
@@ -38,10 +38,9 @@ def logout():
 # ROUTES
 
 @app.route('/drinks')
-@requires_auth('get:drinks')
-def retrieve_drinks(jwt):
+def retrieve_drinks():
     '''
-    @TODO implement endpoint
+    @DONE implement endpoint
         GET /drinks
             it should be a public endpoint
             it should contain only the drink.short() data representation
@@ -49,57 +48,231 @@ def retrieve_drinks(jwt):
             where drinks is the list of drinks
             or appropriate status code indicating reason for failure
     '''
-    return 'Get me a drink'
+    drinks = Drink.query.all()
+
+    if len(drinks) == 0:
+        abort(404, description='No drinks found.')
+
+    for i in range(len(drinks)):
+        drink = drinks[i].short()
+        drinks[i] = drink
+
+    return jsonify({
+        "success": True,
+        "drinks": drinks
+    }), 200
 
 
-'''
-@TODO implement endpoint
-    GET /drinks-detail
-        it should require the 'get:drinks-detail' permission
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drinks}
-    where drinks is the list of drinks
-        or appropriate status code indicating reason for failure
-'''
+
+@app.route('/drinks-detail')
+@requires_auth('get:drinks-detail')
+def retrieve_drinks_detail(jwt):
+    '''
+    @DONE implement endpoint
+        GET /drinks-detail
+            it should require the 'get:drinks-detail' permission
+            it should contain the drink.long() data representation
+        returns status code 200 and json {"success": True, "drinks": drinks}
+        where drinks is the list of drinks
+            or appropriate status code indicating reason for failure
+    '''
+    drinks = Drink.query.all()
+
+    if len(drinks) == 0:
+        abort(404, description='No drinks found.')
+
+    for i in range(len(drinks)):
+        drink = drinks[i].long()
+        drinks[i] = drink
+
+    return jsonify({
+        "success": True,
+        "drinks": drinks
+    }), 200
 
 
-'''
-@TODO implement endpoint
-    POST /drinks
-        it should create a new row in the drinks table
-        it should require the 'post:drinks' permission
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drink}
-        where drink an array containing only the newly created drink
-        or appropriate status code indicating reason for failure
-'''
+@app.route('/drinks', methods=['POST'])
+@requires_auth('post:drinks')
+def create_drink(jwt):
+    '''
+    @DONE implement endpoint
+        POST /drinks
+            it should create a new row in the drinks table
+            it should require the 'post:drinks' permission
+            it should contain the drink.long() data representation
+        returns status code 200 and json {"success": True, "drinks": drink}
+            where drink an array containing only the newly created drink
+            or appropriate status code indicating reason for failure
+    '''
+    body = request.get_json()
+    title = body.get('title')
+    recipe = body.get('recipe')
+
+    if (
+        type(title) is not str
+        or type(recipe) is not list
+        ):
+        abort(400, description='Title or recipe list is not correct type.')
+
+    if (
+        title == '' 
+        or len(recipe) == 0
+        ):
+        abort(422, description='Title or recipe list is empty.')
+
+    # Check if title is unique
+    search = Drink.query.filter(Drink.title == title).one_or_none()
+    if search is not None:
+        abort(409, description='Title is not unique.')
+
+    # Check recipe elements
+    for r in recipe:
+        if type(r) is not dict:
+            abort(400, description='Recipe is not dictionary type.')
+        
+        name = r.get('name')
+        color = r.get('color')
+        parts = r.get('parts')
+
+        if (
+            type(name) is not str
+            or type(color) is not str
+            or type(parts) is not int
+            ):
+            abort(400, description='Recipe elements are either missing or not correct type.')
+        
+        if (
+            name == ''
+            or color == ''
+            or parts < 1
+            ):
+            abort(422, description='Recipe element is empty or incorrect.')
+
+    try:
+        recipe = json.dumps(recipe)
+
+        drink = Drink(title=title, recipe=recipe)
+        drink.insert()
+
+        return jsonify({
+            "success": True,
+            "drinks": [drink.long()]
+        }), 200
+
+    except:
+        abort(400, description='Could not create drink.')
 
 
-'''
-@TODO implement endpoint
-    PATCH /drinks/<id>
-        where <id> is the existing model id
-        it should respond with a 404 error if <id> is not found
-        it should update the corresponding row for <id>
-        it should require the 'patch:drinks' permission
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drink}
-        where drink an array containing only the updated drink
-        or appropriate status code indicating reason for failure
-'''
+@app.route('/drinks/<int:drink_id>', methods=['PATCH'])
+@requires_auth('patch:drinks')
+def update_drink(jwt, drink_id):
+    '''
+    @DONE implement endpoint
+        PATCH /drinks/<id>
+            where <id> is the existing model id
+            it should respond with a 404 error if <id> is not found
+            it should update the corresponding row for <id>
+            it should require the 'patch:drinks' permission
+            it should contain the drink.long() data representation
+        returns status code 200 and json {"success": True, "drinks": drink}
+            where drink an array containing only the updated drink
+            or appropriate status code indicating reason for failure
+    '''
+    drink = Drink.query.get(drink_id)
+
+    if drink is None:
+        abort(404, description='Drink not found.')
+
+    body = request.get_json()
+    title = body.get('title')
+    recipe = body.get('recipe')
+
+    if title is not None:
+        if type(title) is not str:
+            abort(400, description='Title is not string type.')
+        elif title == '':
+            abort(422, description='Title is empty.')
+
+        # Check if title is unique (excluding current drink)
+        search = Drink.query.filter(Drink.title == title).one_or_none()
+        if search is not None and drink.title != title:
+            abort(409, description='Title is not unique.')
+
+    if recipe is not None:
+        if type(recipe) is not list:
+            abort(400, description='Recipe list is not list type.')
+        elif len(recipe) == 0:
+            abort(422, description='Recipe list is empty.')
+        
+        # Check recipe elements
+        for r in recipe:
+            if type(r) is not dict:
+                abort(400, description='Recipe is not dictionary type.')
+            
+            name = r.get('name')
+            color = r.get('color')
+            parts = r.get('parts')
+
+            if (
+                type(name) is not str
+                or type(color) is not str
+                or type(parts) is not int
+                ):
+                abort(400, description='Recipe element is either missing or not correct type.')
+            
+            if (
+                name == ''
+                or color == ''
+                or parts < 1
+                ):
+                abort(422, description='Recipe element is empty or incorrect.')
+
+    try:
+        if title is not None:
+            drink.title = title
+        if recipe is not None:
+            drink.recipe = json.dumps(recipe)
+
+        drink.update()
+
+        return jsonify({
+            'success': True,
+            'status_code': 200,
+            'drinks': [drink.long()]
+        })
+    except:
+        abort(400, description='Could not update drink.')
 
 
-'''
-@TODO implement endpoint
-    DELETE /drinks/<id>
-        where <id> is the existing model id
-        it should respond with a 404 error if <id> is not found
-        it should delete the corresponding row for <id>
-        it should require the 'delete:drinks' permission
-    returns status code 200 and json {"success": True, "delete": id}
-        where id is the id of the deleted record
-        or appropriate status code indicating reason for failure
-'''
+@app.route('/drinks/<int:drink_id>', methods=['DELETE'])
+@requires_auth('delete:drinks')
+def delete_drink(jwt, drink_id):
+    '''
+    @DONE implement endpoint
+        DELETE /drinks/<id>
+            where <id> is the existing model id
+            it should respond with a 404 error if <id> is not found
+            it should delete the corresponding row for <id>
+            it should require the 'delete:drinks' permission
+        returns status code 200 and json {"success": True, "delete": id}
+            where id is the id of the deleted record
+            or appropriate status code indicating reason for failure
+    '''
+    drink = Drink.query.get(drink_id)
+
+    if drink is None:
+        abort(404, description='Drink not found.')
+
+    try:
+        drink.delete()
+
+        return jsonify({
+            'success': True,
+            'status_code': 200,
+            'delete': drink.id
+        })
+    except:
+        abort(400, description='Could not delete drink.')
 
 
 # Error Handling
@@ -128,6 +301,16 @@ def unprocessable(error):
 
 '''
 
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify({
+        'success': False,
+        'error': 400,
+        'message': 'Bad Request',
+        'description': error.description
+    }), 400
+
+
 @app.errorhandler(405)
 def not_allowed(error):
     return jsonify({
@@ -135,6 +318,15 @@ def not_allowed(error):
         'error': 405,
         'message': 'Method Not Allowed'
     }), 405
+
+
+@app.errorhandler(409)
+def conflict(error):
+    return jsonify({
+        'success': False,
+        'error': 409,
+        'message': 'Conflict'
+    }), 409
 
 
 @app.errorhandler(500)
@@ -178,7 +370,6 @@ def auth_error_handler(error):
         401: "Unauthorized",
         403: "Forbidden"
     }
-
     status_code_message = messages.get(status_code, "Status code message could not be found")
 
     return jsonify({
