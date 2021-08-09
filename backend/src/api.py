@@ -20,21 +20,6 @@ CORS(app)
 # db_drop_and_create_all()
 
 
-# Route for Testing
-@app.route('/login-results')
-def login_esults():
-    logout_url = 'https://omar-fsnd.us.auth0.com/v2/logout?client_id=z4tYXHIDAtht6BCDzGoAa5Ut0wyFZzYs&returnTo=http://localhost:5000/logout'
-    script = '<script>token = window.location.href.split("access_token=")[1].split("&")[0]; document.getElementById("demo").innerHTML = "Access Token is: " + token;</script>'
-    return f'<p id="demo">{script}</p><a href="{logout_url}">Logout</a>'
-
-
-# Route for Testing
-@app.route('/logout')
-def logout():
-    login_url = 'https://omar-fsnd.us.auth0.com/authorize?audience=coffeeshop&response_type=token&client_id=z4tYXHIDAtht6BCDzGoAa5Ut0wyFZzYs&redirect_uri=http://localhost:5000/login-results'
-    return f'<a href="{login_url}">Go to Login</a>'
-
-
 # ROUTES
 
 @app.route('/drinks')
